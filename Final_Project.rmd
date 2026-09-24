@@ -1,0 +1,287 @@
+---
+title: 'PSTAT 126: REGRESSION ANALYSIS'
+subtitle: Final Project
+output:
+  pdf_document: default
+  html_document: default
+---
+
+## Part One
+
+1.  Selecting Random Sample
+
+```{r, message=FALSE, warning=FALSE, paged.print=FALSE, results='hold'}
+library(tidyverse)
+library(patchwork)
+```
+
+```{r, fig.width=3.5, fig.height=3.5, warning=FALSE}
+
+set.seed(124)
+diamonds <- read.csv("Diamonds Prices2022.csv")
+sample_diamonds <- diamonds  |> sample_n(1000)
+summary(sample_diamonds)
+
+```
+
+2)  Description of Variables
+
+```{r,fig.width=7, fig.height=4}
+
+p1 <- ggplot(sample_diamonds, aes(x = X)) +
+  geom_histogram(bins = 30, fill = "lightblue", color = "black") +
+  labs(title = "Histogram of X")
+
+p2 <- ggplot(sample_diamonds, aes(x = carat)) +
+  geom_histogram(bins = 30, fill = "lightblue", color = "black") +
+  labs(title = "Histogram of Carat")
+
+p1 | p2
+```
+
+XVariable: The histogram for x appears approximately uniform, as evidenced by its relatively rectangular shape and the absence of pronounced peaks or clustering.
+
+**Carat**: The distribution of carat is left-skewed with a long, gradually decreasing tail as carat values increase. This pattern suggests that a transformation (e.g., log or square root) may be appropriate if normalization is desired.
+
+```{r, fig.width=7, fig.height=4, warning=FALSE, echo = FALSE}
+p1 <- ggplot(sample_diamonds, aes_string(x="depth")) +
+      geom_histogram(bins=30,fill = "lightblue", color = "black") +
+      labs(title = "Histogram of Depth")
+
+p2 <- ggplot(sample_diamonds, aes_string(x="table")) +
+      geom_histogram(bins=30,fill = "lightblue", color = "black") +
+      labs(title = "Histogram of Table")
+
+p1 | p2
+```
+
+**Depth**: In the random sample, depth displays a shape that is close to normal, characterized by a narrow central peak. This suggests that the variable may reasonably follow a normal distribution.
+
+**Table** Variable: The histogram for table resembles a near-normal distribution; however, noticeable left skewness and substantial gaps between some bins indicate deviations from perfect normality.
+
+```{r, fig.width=7, fig.height=4, warning=FALSE, echo = FALSE}
+p1 <- ggplot(sample_diamonds, aes_string(x="price")) +
+      geom_histogram(bins=30,fill = "lightblue", color = "black") +
+      labs(title = "Histogram of Price")
+
+p2 <- ggplot(sample_diamonds, aes_string(x="x")) +
+      geom_histogram(bins=30,fill = "lightblue", color = "black") +
+      labs(title = "Histogram of x")
+
+p1 | p2
+```
+
+**Price**: The price distribution is strongly left-skewed, showing a steep decline as values increase. Its shape closely parallels the distribution of carat, again suggesting a potential need for transformation depending on modeling goals.
+
+**x (Length)**: The histogram for x (length) does not exhibit features clearly aligned with common theoretical distributions. Mild left skewness is present, but no dominant pattern emerges.
+
+```{r, fig.width=7, fig.height=4, warning=FALSE, echo = FALSE}
+p1 <- ggplot(sample_diamonds, aes_string(x="y")) +
+      geom_histogram(bins=30,fill = "lightblue", color = "black") +
+      labs(title = "Histogram of y")
+
+p2 <- ggplot(sample_diamonds, aes_string(x="z")) +
+      geom_histogram(bins=30,fill = "lightblue", color = "black") +
+      labs(title = "Histogram of z")
+
+p1 | p2
+```
+
+**Y (Width)**: The y (width) variable also lacks resemblance to standard distributions and displays an uneven central region, indicating imbalance in the frequency of mid-range values.
+
+**Z (Depth):** The distribution of z mirrors that of y, showing no clear alignment with known distributional shapes and exhibiting similar irregularities.
+
+```{r, fig.width=2.25, fig.height=4, warning=FALSE, echo = FALSE}
+ggplot(sample_diamonds, aes_string(x = "cut")) +
+      geom_bar(fill = "orange") +
+      labs(title = "Bar Plot of Cut")
+      
+ggplot(sample_diamonds, aes_string(x = "clarity")) +
+      geom_bar(fill = "orange") +
+      labs(title = "Bar Plot of Clarity")
+ 
+ggplot(sample_diamonds, aes_string(x = "color")) +
+      geom_bar(fill = "orange") +
+      labs(title = "Bar Plot of Color") 
+```
+
+\pagebreak
+
+\
+3) Selection of Variables and Correlation (3 quantitative 2 categorical)
+
+```         
+PRICE, CARAT, DEPTH, TABLE, CUT, CLARITY
+```
+
+```{r echo=FALSE, fig.height=12, fig.width=12, message=FALSE, warning=FALSE, paged.print=TRUE}
+library(GGally)
+diamond_subset <- sample_diamonds[,c(8,2,7,3,5)]
+ggpairs(diamond_subset, progress = FALSE)
+
+```
+
+\pagebreak
+
+\
+4) Running the LRM with Summary Statistics
+
+```{r}
+diamond_model <- lm(price ~., data = diamond_subset)
+summary(diamond_model)
+
+```
+
+5)  Comments on the Summary statistics
+
+    The regression results align with expectations in showing that a one–carat increase corresponds to a substantial rise in price—approximately \$8,254—which reflects the strong economic value associated with larger diamonds. However, the magnitude of the effects for several appearance-related characteristics was more surprising. In particular, clarity exhibited a notably large influence on price, indicating that visual quality plays a critical role in market valuation. The significance of cut was also unexpected, suggesting that consumers and evaluators are highly sensitive to multiple characteristics of a diamond’s appearance. Collectively, these findings imply that the diamond market is both strict and highly discerning. Additionally, the model’s adjusted R² of 0.89 (approximately similar by .01 decimal point of R\^2 of .9009)indicates that it explains a remarkably high proportion of the variability in price, demonstrating strong overall model fit. \pagebreak
+
+## Part 2
+
+1.  Choosing the Simple Model
+
+```{r}
+simple_model1 <- lm(carat~clarity, data= diamond_subset)
+simple_model1
+```
+
+2.  Running the Model and Summary Statistics
+
+```{r, warning=FALSE}
+summary(simple_model1)
+
+
+```
+
+```{r, fig.width=6, fig.height=3, warning=FALSE}
+library(ggplot2)
+library(dplyr)
+
+clarity_levels <- data.frame(clarity = unique(diamond_subset$clarity))
+
+pred_df <- cbind(
+  clarity_levels,
+  predict(simple_model1, newdata = clarity_levels,
+          interval = "confidence")
+)
+
+ggplot(pred_df, aes(x = clarity, y = fit)) +
+  geom_point(size = 3, color = "blue") +
+  geom_errorbar(aes(ymin = lwr, ymax = upr), width = 0.15) +
+  labs(
+    title = "Mean Carat Size by Clarity with 95% Confidence Intervals",
+    x = "Clarity",
+    y = "Predicted Carat"
+  ) 
+  
+
+pred_df_PI <- cbind(
+  clarity_levels,
+  predict(simple_model1, newdata = clarity_levels,
+          interval = "prediction")
+)
+
+ggplot(pred_df_PI, aes(x = clarity, y = fit)) +
+  geom_point(size = 3, color = "darkred") +
+  geom_errorbar(aes(ymin = lwr, ymax = upr), width = 0.15) +
+  labs(
+    title = "Predicted Carat Size by Clarity with 95% Prediction Intervals",
+    x = "Clarity",
+    y = "Predicted Carat"
+  ) 
+  
+
+```
+
+The overall significance test for the simple linear regression model reports a p-value of 2.2e-16, which is far below the 0.05 threshold. This indicates strong evidence that the predictor—clarity—has a statistically significant effect on the carat measurement of a diamond. Similarly, the partial significance test confirms that this predictor is individually significant in explaining variation in the response variable. The adjusted R² is nearly identical to the regular R², suggesting that the model is not being penalized for overfitting. However, the R² value indicates that the model explains only about 11.45% of the total variability in carat. This relatively low proportion suggests that the simple linear regression model is not capturing much of the underlying structure in the data, and that a more complex or differently specified model may provide a better fit. Its also important to point out that the prediction intervals are wider, as expected, because its trying to capture an exact carat amount instead of the average carat amount in the confidence interval. In addition, the length of the prediction interval , mathematically speaking, is always wider than the confidence interval of an arbitrary model.\
+
+3.  Testing Assumptions and Transformations
+
+```{r,fig.width=3.5, fig.height=3.5}
+plot(simple_model1)
+
+```
+
+An inspection of the diagnostic plots for the model *carat \~ clarity* shows clear violations of several regression assumptions. The Residuals vs. Fitted and Scale–Location plots both indicate some heteroscedasticity, with a spread that kinda resembles a funnel. The Normal Q–Q plot shows strong deviations in both tails, suggesting that the residuals are not normally distributed. Although the Residuals vs. Leverage plot identifies a few moderately influential points, none appear severely problematic. Overall, the model does not meet the assumptions of normality or constant variance, and a transformation of carat or a more comprehensive model may provide a better fit.
+
+```{r,fig.width=3.5, fig.height=3.5}
+sqrt_simple_model1 <- lm(sqrt(carat)~clarity, data= diamond_subset)
+sqrt_simple_model1 
+plot(sqrt_simple_model1)
+```
+
+Applying a square-root transformation to the response variable improved the model’s adherence to the regression assumptions. The Q–Q plot became noticeably more linear, indicating that the residuals more closely follow a normal distribution. Additionally, the Residuals vs. Fitted and Scale–Location plots showed a more uniform spread of residuals, suggesting that the transformation effectively reduced heteroscedasticity and stabilized the variance across fitted values.
+
+4.  Summary on the Square Root Model vs Regular
+
+```{r}
+summary(simple_model1)
+summary(sqrt_simple_model1)
+```
+
+After applying a square root transformation to carat, the regression output showed several improvements. The residual standard error decreased substantially (0.4435 to 0.2352), indicating a tighter model fit. All clarity coefficients became smaller in magnitude but retained their signs and significance, reflecting the compression caused by the transformation. The R² and adjusted R² values increased slightly, and the F-statistic grew from 18.33 to 20.17, suggesting that clarity explains a bit more variation under the transformed scale. Overall, the transformed model shows improved fit, reduced residual variance, and better adherence to the regression assumptions.
+
+5.(6) Selecting and commenting on the best Model (Background)
+
+```{r, echo = FALSE, results='hide'}
+model_carat <- lm(carat ~ ., data = diamond_subset)
+aic_model <- step(model_carat, direction = 'both')
+summary(model_carat)
+summary(aic_model)
+bic_model <- step(model_carat, direction = 'both', k = log(nrow(diamond_subset)))
+summary(bic_model)
+```
+
+Using all selected predictors to model carat substantially improved the overall model performance. Including these variables reduced the residual standard error and increased the F-statistic, both indicating a stronger model fit. The final model demonstrated high explanatory power, accounting for approximately 90% of the total variability in carat. This suggests that the chosen predictors collectively provide a meaningful and effective explanation of differences in diamond size.\
+\
+
+Part 3
+
+1.  Finding the Best Model
+
+```{r}
+carat_model <- lm(carat ~ ., data=sample_diamonds)
+#carat_aic <- step(carat_model, direction = 'both')
+#summary(carat_aic)
+carat_bic <- step(carat_model, direction = 'both', k = log(nrow(sample_diamonds)))
+summary(carat_bic)
+```
+
+After conducting model selection using both the AIC and BIC criteria, we found that each method identified the same optimal model. This reduced model retained price, table, color, and clarity as predictors. The resulting fit demonstrated strong performance, with the adjusted $R^2_{adj}$ closely aligning with the regular $R^2$, indicating that the model explains the data well without evidence of overfitting. Notably, the model accounted for approximately 98% of the variability in diamond size, suggesting exceptionally high explanatory power. The residual standard error was also low, further supporting the model’s precision. Additionally, the large F-statistic provides evidence of strong overall model significance and reinforces confidence in the selected predictors.
+
+2.  Detecting Multicollinearity ( + Testing of Assumptions + Transformations)
+
+```{r, fig.width=3.5, fig.height=3.5}
+library(car)
+vif(carat_bic)
+carat_vif <- lm(
+  carat ~ color + clarity + table + price, data=sample_diamonds
+  )
+plot(carat_vif)
+
+# Checking Assumptions before Transforming!!!
+transformed_carat_vif <- lm(
+  log(carat) ~ color + clarity + 
+    log(table) + log(price), data=sample_diamonds)
+
+summary(transformed_carat_vif)
+plot(transformed_carat_vif)
+```
+
+Due to the substantial multicollinearity among the predictors x, y, and z in the original model, we elected to use a revised model that excludes these variables. After their removal, the remaining predictors exhibited VIF values close to 1, indicating negligible multicollinearity. Although this decision resulted in a modest reduction in the model’s $R^2$ , the revised model still accounted for 93% of the total variability in the response, suggesting that explanatory power remained strong. The residual standard error increased roughly to 12%, reflecting a minor decline in predictive accuracy. Nonetheless, we selected this reduced model over the original because it offers a more interpretable structure and clearer relationships between the predictors and the response variable. In the end– when we tested the assumptions on the model– we found that the quantitative predictors actually had a log linear relationship toward the response variable carat. This is due to the fact that after we transformed the model all the assumptions (normality, homoscedasticity, power of influencers) of the LRM were now followed by the model.
+
+3.  Prediction and Confidence Intervals of a Unique Combination of Predictors
+
+```{r}
+X_values <- data.frame(color = "F", clarity = "SI1", price = 10000, table = 54)
+predict(transformed_carat_vif,X_values, interval = "confidence")
+predict(transformed_carat_vif,X_values, interval = "prediction")
+```
+
+4.  CONCLUSION
+
+This project analyzed a random sample of 1,000 diamonds to examine the relationships among both quantitative and categorical variables with the goal of building regression models for prediction and inference. The simple linear regression focused on predicting initial price using individual predictors, while the multiple regression model concentrated on explaining variation in diamond size (carat). Initial exploratory analysis revealed several skewed distributions, suggesting the need for potential transformations to better satisfy model assumptions. Tools such as ggpairs further supported informed variable selection by illustrating associations among predictors and the response.
+
+The simple linear regression using clarity as the sole predictor demonstrated limited explanatory power, and diagnostic plots indicated violations of normality and homoscedasticity. These issues improved substantially after applying a square-root transformation to the response variable.
+
+For the multiple linear regression model, AIC and BIC criteria were used to identify an effective set of predictors. We also cut three predictors from the model using VIF calculations for finding multicollinearity, to make the model more interrepretable while slightly loosing a bit in prediction power. Additional logarithmic transformations were applied to ensure that the final model satisfied key assumptions of normality, homogeneity of variance, and resistance to the influence of outliers.
